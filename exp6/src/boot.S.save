@@ -115,7 +115,7 @@ el1_entry:
 	// @tbl now points to the newly created PUD table
 	create_table_entry \tbl, \virt, PUD_SHIFT, \tmp1, \tmp2		// set a PUD entry
 	// @tbl now points to the newly created PMD table
-	create_table_entry2 \tbl, \virt, PGD_SHIFT, \tmp1, \tmp2
+
 	.endm
 
 	// Allocating a new page table (either PGD or PUD) for the kernel's initial page tables
@@ -135,18 +135,6 @@ el1_entry:
 	str	\tmp2, [\tbl, \tmp1, lsl #3]			// store descriptor (tmp2) to the current pgtable at index (tmp1)
 	add	\tbl, \tbl, #PAGE_SIZE					// point @tbl to the newly create next level pgtable. programming ease
 	.endm
-
-	.macro  create_table_entry2, tbl, virt, shift, tmp1, tmp2
-        lsr     \tmp1, \virt, #\shift
-        and     \tmp1, \tmp1, #PTRS_PER_TABLE - 1              // tmp1: table index
-        add     \tmp2, \tbl, #PAGE_SIZE                                 // tmp2: addr of a next level pgtable (PUD or PMD). 
-        add	\tmp2, \tmp2, #SECTION_SIZE
-	orr     \tmp2, \tmp2, #MM_TYPE_PAGE_TABLE               // tmp2: make a table descriptor. set bits[0:1] to 1. 
-        str     \tmp2, [\tbl, \tmp1, lsl #3]                    // store descriptor (tmp2) to the current pgtable at index (tmp1)
-        add     \tbl, \tbl, #PAGE_SIZE                                  // point @tbl to the newly create next level pgtable. programming ease
-        add	\tbl, \tbl, #SECTION_SIZE
-	.endm
-
 
 	// Populating entries in a PMD table for a given virt addr range 
 	// @tbl: a reg pointing to the PMD table
@@ -208,11 +196,6 @@ __create_page_tables:
 	mov 	x2, #VA_START		// x2 = the virtual base of the first section
 	ldr		x3, =(VA_START + DEVICE_BASE - SECTION_SIZE)  // x3 = the virtual base of the last section
 	create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
-
-	mov	x1, #PHYS_MEMORY_SIZE
-	ldr	x2, =(VA_START + PHYS_MEMORY_SIZE)
-	ldr	x3, =(VA_START + PHYS_MEMORY_SIZE + SECTION_SIZE)
-	create_block_map x6, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
 	/* Mapping device memory. Phys addr range: DEVICE_BASE--PHYS_MEMORY_SIZE(0x40000000) */
 	mov 	x1, #DEVICE_BASE					// x1 = start mapping from device base address 
