@@ -1,0 +1,56 @@
+diff --git a/exp1/counter b/exp1/counter
+index b361976..eb8b69b 100755
+Binary files a/exp1/counter and b/exp1/counter differ
+diff --git a/exp1/counter.c b/exp1/counter.c
+index 6b2ad85..fd78140 100755
+--- a/exp1/counter.c
++++ b/exp1/counter.c
+@@ -21,6 +21,17 @@ int c_and_sFlag = 0;
+ 
+ pthread_mutex_t mutex;
+ // todo: define a spinlock variable 
++//int spinlock = 0;
++int spinlock = 0;
++
++void lock() {
++    while(__atomic_test_and_set(&spinlock, __ATOMIC_SEQ_CST));
++}
++
++void unlock() {
++    __atomic_thread_fence(__ATOMIC_RELEASE);
++    spinlock = 0;
++}
+ 
+ char const * getTestName() {
+     if(mutexFlag)
+@@ -57,17 +68,25 @@ void add_iterate(int val, int iterations) {
+         }
+         else if(spinLockFlag) {
+             // todo: lock the spinlock
+-            add(&the_counter, val);
++	    //while (__atomic_test_and_set(&spinlock, __ATOMIC_SEQ_CST));
++            lock();
++	    add(&the_counter, val);
+             // todo: unlock the spinlock
++	    unlock();
++	    //__atomic_clear(spinlock, __ATOMIC_SEQ_CST);
+         }
+         else if(c_and_sFlag) {
+             long long oldVal, newVal;
+ 			
+ 	    /* todo: change the following, so that it updates @the_counter atomically using CAS */
+-	    oldVal = the_counter;
+-	    newVal = oldVal + val;
+-	    the_counter = newVal; 
+-	    /* --- */
++	    //oldVal = the_counter;
++            //newVal = oldVal + val;
++	    while(__atomic_compare_exchange_n (&the_counter, &oldVal, newVal, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == 0){
++	 	oldVal = the_counter;
++	    	newVal = oldVal + val;
++	    }
++	    //the_counter = newVal; 
++	    /* --- */ 
+         }
+         else
+             add(&the_counter, val);
